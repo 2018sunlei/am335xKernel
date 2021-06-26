@@ -12,6 +12,14 @@
  *******************************/
 //内核驱动不会调用用户态的头文件，只会包含内核源码下的头文件
 #include <linux/module.h> //对应kernel/include/module.h
+#include <linux/interrupt.h>
+#include <linux/gpio.h>
+
+static irqreturn_t myIntHandler(int irq, void *dev_id)
+{
+	printk("<0>Interrupt IN\n");
+	return IRQ_HANDLED;
+}
 
 //模块是没有main的，因为不是可执行的程序
 //模块有入口函数，在insmod时调用，完成驱动的初始化工作
@@ -21,6 +29,23 @@ static int __attribute__((__section__(".init.text"))) my_init(void)
 	//如果采用默认级别，需要用dmesg来查看消息
 	//但如果将消息级别提升为<0>，则默认直接在控制台打印内核消息
 	printk("<0>Hello kernel! 2018-03-26\n");
+	int ret, irqno;
+	int gpioNo = 113;
+	ret = gpio_request(gpioNo, "mygpiopin");
+	if(ret){
+		printk("<0>irq pin request io failed.\n");
+		return -1;
+	}
+ 
+	irqno= gpio_to_irq(gpioNo);
+ 
+ 
+	ret = request_irq(irqno,myIntHandler , IRQF_TRIGGER_RISING|IRQF_TRIGGER_HIGH, "myinterrupt", NULL); 
+	if(ret) {
+		printk(KERN_ERR "<0>can not get irq\n");
+		return ret;
+	}
+	printk("<0> ADD Interrupt kernel! 2018-03-26\n");
 	return 0;	//如果初始化成功返回0，否则返回负值
 }
 
